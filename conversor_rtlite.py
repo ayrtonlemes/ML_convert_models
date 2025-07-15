@@ -1,18 +1,26 @@
 import ai_edge_torch
 import torch
-import timm
+from torchvision import models
 
-# Cria o modelo exatamente como foi treinado
-#Aqui seleciona o modelo no formato do arquivo de geração, em seguida o modelo gerado, e o nome do modelo de saida
+#from ai_edge_torch.convert.converter import convert
+# === Define a quantidade de classes
+num_classes = 3
 
-model = timm.create_model("swin_tiny_patch4_window7_224", pretrained=False, num_classes=3) #Modelo base do timm
-model.load_state_dict(torch.load("/home/ayrton/Área de Trabalho/LEGO_ML/convertendo_modelos/modelos_gerados/swin_tiny_best.pth", map_location="cpu")) #Modelo pytorch pra carregar os state_dict
+# === Cria o modelo ResNet18 com a última camada ajustada
+model = models.resnet18(weights=None)
+model.fc = torch.nn.Linear(model.fc.in_features, num_classes)
+
+# === Carrega os pesos do modelo treinado
+model.load_state_dict(torch.load("resnet18_classificador_emocoes.pth", map_location="cpu"))
 model.eval()
 
-# Input de exemplo
+# === Define input de exemplo (mesma forma usada no treino/inferência)
 sample_inputs = (torch.randn(1, 3, 224, 224),)
 
-# Converte para TFLite
-edge_model = ai_edge_torch.convert(model, sample_inputs)
-edge_model.export("swin_tiny_best.tflite")
-print("Modelo exportado com sucesso!")
+# === Converte para TFLite com ai_edge_torch
+edge_model = ai_edge_torch.convert(model.eval(), sample_inputs) #usar o converter direto
+
+edge_model.export("resnet18_classificador_emocoes.tflite")
+
+print("✅ Modelo TFLite exportado com sucesso!")
+
